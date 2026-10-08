@@ -1,4 +1,6 @@
 # ChatUAS
+![University](https://img.shields.io/badge/University-Frankfurt%20UAS-008ec8)
+![Ollama](https://img.shields.io/badge/Ollama-fff?logo=ollama&logoColor=000)
 
 Chatbot Application for Questions regarding the Websites of the Frankfurt University of Applied Sciences
 - https://www.frankfurt-university.de/
