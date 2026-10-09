@@ -1,1 +1,3 @@
 ChatUASEnv/* 
+.venv/
+__pycache__/
