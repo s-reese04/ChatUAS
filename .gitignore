@@ -1,1 +1,4 @@
 ChatUASEnv/* 
+.venv/
+__pycache__/
+units.txt
