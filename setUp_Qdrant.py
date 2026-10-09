@@ -27,7 +27,7 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=30)
 chunks = text_splitter.split_documents(sample_docs)
 
 # Save to quadrant
-collection_name = "mein_wissensnetz"
+collection_name = "chatuas_qdrant_store"
 
 vector_store = QdrantVectorStore.from_documents(
     documents=chunks,
