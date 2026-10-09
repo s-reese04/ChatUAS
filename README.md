@@ -9,6 +9,7 @@ Chatbot Application for Questions regarding the Websites of the Frankfurt Univer
 ## Table of Contents
 - [Overview](#overview)
 - [File Structure](#file-structure)
+- [Contributers](#contributers)
 
 
 ## Overview
@@ -27,3 +28,10 @@ Any Prompts posed to ChatUAS are processed in steps:
 - rag_app.py -- performs rag on the local model
 - setUp_Qdrant.py -- initializes the Qdrant DB with sentences
 - start_ChatUAS.sh -- starts the Qdrant -> calls setUp_Qdrant.py -> rag_app.py
+
+## Contributers
+### Project Management
+- [Christina Malki](https://github.com/christinamalki)
+### Development Team
+- [Simon Reese](https://github.com/s-reese04)
+- [Abel Solyom](https://github.com/CactussJack)
