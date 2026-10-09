@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 
 
 URL = "https://www.frankfurt-university.de/"
-PHRASE = "Sprachkurse im Wintersemester"
 
 response = requests.get(URL, timeout=10)
 soup = BeautifulSoup(response.content, 'html.parser')
