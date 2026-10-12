@@ -55,7 +55,7 @@ def rag(question: str) -> dict:
     }
 
 if __name__ == "__main__":
-    result = rag("In welcher Programmiersprache wurde Qdrant geschrieben?")
+    result = rag("Gibt es Infos zu den Sprachkursen?")
 
     print(f"Antwort: {result["answer"]}")
     print("Sources:")
