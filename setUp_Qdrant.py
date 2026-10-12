@@ -1,11 +1,10 @@
-from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 # Initiate Ollama model and embedding
 embeddings = OllamaEmbeddings(model="bge-m3")  # Oder nomic-embed-text
-llm = ChatOllama(model="qwen2.5:7b", temperature=0.2)
 
 sample_docs = []
 
@@ -14,7 +13,7 @@ with open("units.txt") as f:
     sample_docs.append(Document(f.readline()))
 
 # Generate Text Splitter, chunk_size = How big is a chunk, chunk_overlap = How many chars are overlapped between chunks
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=30)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=30)
 
 # Splits sample_docs into the chunks with the text splitter
 chunks = text_splitter.split_documents(sample_docs)
