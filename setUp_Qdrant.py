@@ -7,18 +7,11 @@ from langchain_core.documents import Document
 embeddings = OllamaEmbeddings(model="bge-m3")  # Oder nomic-embed-text
 llm = ChatOllama(model="qwen2.5:7b", temperature=0.2)
 
-# Sample Sentences
-sample_docs = [
-    Document(
-        page_content="Qdrant ist eine in Rust geschriebene Vektordatenbank, die extrem schnell Vektorsuchen durchführen kann."
-    ),
-    Document(
-        page_content="Qwen 2.5 7B ist ein Sprachmodell von Alibaba Cloud mit starker Sprach- und Code-Leistung."
-    ),
-    Document(
-        page_content="RAG erweitert ein Sprachmodell um eine Vektordatenbank, um präzise Antworten aus eigenen Dokumenten zu liefern."
-    ),
-]
+sample_docs = []
+
+# Read from unit.txt
+with open("units.txt") as f:
+    sample_docs.append(Document(f.readline()))
 
 # Generate Text Splitter, chunk_size = How big is a chunk, chunk_overlap = How many chars are overlapped between chunks
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=30)
