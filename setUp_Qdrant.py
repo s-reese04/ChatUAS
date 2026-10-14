@@ -1,22 +1,22 @@
+import json
 from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
+
 
 # Initiate Ollama model and embedding
 embeddings = OllamaEmbeddings(model="bge-m3")  # Oder nomic-embed-text
 
-sample_docs = []
+chunks = []
 
-# Read from unit.txt
-with open("units.txt") as f:
-    sample_docs.append(Document(f.readline()))
-
-# Generate Text Splitter, chunk_size = How big is a chunk, chunk_overlap = How many chars are overlapped between chunks
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=30)
-
-# Splits sample_docs into the chunks with the text splitter
-chunks = text_splitter.split_documents(sample_docs)
+# Read from chunks.jsonl
+with open("chunks.jsonl", "r", encoding="utf-8") as f:
+    for line in f:
+        if not line.strip():
+            continue
+        record = json.loads(line)
+        text = record.pop("text")
+        chunks.append(Document(page_content=text, metadata=record))
 
 # Save to quadrant
 collection_name = "chatuas_qdrant_store"
