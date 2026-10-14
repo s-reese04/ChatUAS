@@ -13,7 +13,7 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
 # Initiate Ollama model and embedding
 embeddings = OllamaEmbeddings(model="bge-m3")
-llm = ChatOllama(model=os.getenv("LLM_MODEL", "qwen2.5:7b"), temperature=0.2, base_url=OLLAMA_URL)
+llm = ChatOllama(model=os.getenv("LLM_MODEL", "qwen2.5:7b"), temperature=0.0, base_url=OLLAMA_URL)
 
 collection_name = "chatuas_qdrant_store"
 
@@ -26,6 +26,8 @@ vector_store = QdrantVectorStore.from_existing_collection(
 system_prompt = (
         "Du bist ein präziser Assistent. Beantworte die Frage ausschließlich "
         "auf Basis des folgenden Kontexts: \n\n{context}"
+        "Lässt sich die Frage nicht mit den Kontext beantworten, dann sag:"
+        "Ich kann dies leider nicht beantworten, bitte melden Sie sich an die Studienberatung"
         )
 
 
@@ -40,10 +42,12 @@ def rag(question: str) -> dict:
         context_parts.append(chunk.page_content)
 
         sources.append({
-            "index": i,
-            "source": chunk.metadata.get("source", chunk.metadata.get("quelle", "Unbekannte Quelle")),
-            "page": chunk.metadata.get("page", chunk.metadata.get("seite", "N/A")),
-            "snippet": chunk.page_content[:150] + "..."  
+            "Index": i,
+            "Url": chunk.metadata.get("url", "Quelle unbekannt"),
+            "Sektion": chunk.metadata.get("section", "Sektion unbekannt"),
+            "Seiten_Name": chunk.metadata.get("page_title", "Seiten Name unbekannt"),
+            "Datum": chunk.metadata.get("scraped_at", "Kein Datum vorhanden"),
+            "Ausschnitt": chunk.page_content[:150],
         })
 
     context_text = "\n\n".join(context_parts)
@@ -66,8 +70,8 @@ def print_result(result: dict) -> None:
     print(f"\nAntwort:  {result["answer"]}\n")
     print("Quellen:")
     for src in result["sources"]:
-        print(f"[{src["index"]}] {src["source"]} (Seite{src["page"]})")
-        print(f"     \"{src["snippet"]}\"")
+        print(f"[{src["Index"]}]  Url: {src["Url"]}  Datum: {src["Datum"]}")
+        print(f"     \"{src["Ausschnitt"]}\"")
 
 
 def main() -> None:
