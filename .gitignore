@@ -2,3 +2,4 @@ ChatUASEnv/*
 .venv/
 __pycache__/
 units.txt
+chunks.jsonl

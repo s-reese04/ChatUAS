@@ -51,10 +51,10 @@ packaging==26.3
 portalocker==3.2.0
 propcache==0.5.4
 protobuf==7.36.2
-pydantic==2.13.5
+pydantic
 pydantic-settings==2.15.0
-pydantic_core==2.46.
-python-dateutil==2.9.0.post05
+pydantic_core
+python-dateutil==2.9.0.post0
 python-dotenv==1.2.4
 pytz==2026.5
 PyYAML==6.0.3
