@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
@@ -32,8 +33,17 @@ system_prompt = (
 
 
 def rag(question: str) -> dict:
+    beforeRetrieve = time.time()
+
     retriever = vector_store.as_retriever(search_kwargs={"k": 5})
     chunks = retriever.invoke(question)
+    
+    afterRetrieve = time.time()
+
+    # Stats for time spend to Retrieve the chunks
+    with open("stats.txt", "a") as s:
+        s.write(f"Retrieve Time: {afterRetrieve - beforeRetrieve:.2f} seconds\n")
+        s.close()
 
     context_parts = []
     sources = []
@@ -56,9 +66,18 @@ def rag(question: str) -> dict:
         ("system", system_prompt),
         ("human", "{question}"),
     ])
+    
+    beforeModel = time.time()
 
     chain = prompt | llm | StrOutputParser()
     answer = chain.invoke({"context": context_text, "question": question})
+    
+    afterModel = time.time()
+    
+    # Stats for Time spend for the Model
+    with open("stats.txt", "a") as s:
+        s.write(f"Model time: {afterModel - beforeModel:.2f} seconds\n")
+        s.close()
 
     return {
         "answer": answer,
@@ -80,6 +99,7 @@ def main() -> None:
         return
 
     print("Wilkommen zu ChatUAS. Leere Eingabe beendet das Programm.")
+    
     while True:
         question = input("\nFrage: ").strip()
         if question.lower() in (""):
@@ -87,4 +107,5 @@ def main() -> None:
         print_result(rag(question))
 
 if __name__ == "__main__":
-   main() 
+
+    main()
