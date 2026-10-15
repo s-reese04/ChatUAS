@@ -29,15 +29,17 @@ class Question(BaseModel):
 
 
 class Source(BaseModel):
-    index: int
-    source: str
-    page: int | str
-    snippet: str
+    Index: int
+    Url: str
+    Sekton: str
+    Seiten_Name: str
+    Datum: str
+    Ausschnitt: str
 
 
 class Answer(BaseModel):
     answer: str
-    sources: list[Source]
+    sources: list[dict]
 
 
 @app.post("/chat", response_model=Answer)
