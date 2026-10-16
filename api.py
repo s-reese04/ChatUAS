@@ -2,7 +2,9 @@ import logging
 import os
 import threading
 
+from collections.abc import Iterable
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -29,15 +31,17 @@ class Question(BaseModel):
 
 
 class Source(BaseModel):
-    index: int
-    source: str
-    page: int | str
-    snippet: str
+    Index: int
+    Url: str
+    Sekton: str
+    Seiten_Name: str
+    Datum: str
+    Ausschnitt: str
 
 
 class Answer(BaseModel):
     answer: str
-    sources: list[Source]
+    sources: list[dict]
 
 
 @app.post("/chat", response_model=Answer)
@@ -45,12 +49,28 @@ def chat(q: Question):
     if not slots.acquire(timeout=30):
         raise HTTPException(status_code=503, detail="Der Assistent ist gerade ausgelastet.")
     try:
-        return rag(q.question)
+        return rag(q.question, stream=False)
     except Exception:
         logger.exception("Fehler in rag()")
         raise HTTPException(status_code=502, detail="Der Assistent ist vorübergehend nicht erreichbar.")
     finally:
         slots.release()
+
+
+@app.post("/chat/stream")
+def chat_stream(q: Question):
+    def gen():
+        if not slots.acquire(timeout=30):
+            yield "Der Assistent ist gerade ausgelastet."
+            return
+        try:
+            tokens, sources = rag(q.question, stream=True)
+            for token in tokens:
+                yield token
+            yield "\n\nQuellen:\n" + "\n".join(s["Url"] for s in sources)
+        finally:
+            slots.release()
+    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
 @app.get("/health")

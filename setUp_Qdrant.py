@@ -2,6 +2,7 @@ import json
 from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_core.documents import Document
+from uuid import uuid5, NAMESPACE_URL
 
 
 # Initiate Ollama model and embedding
@@ -18,12 +19,16 @@ with open("chunks.jsonl", "r", encoding="utf-8") as f:
         text = record.pop("text")
         chunks.append(Document(page_content=text, metadata=record))
 
+# Setup ids for chunks
+ids = [str(uuid5(NAMESPACE_URL, c.metadata["url"] + c.page_content)) for c in chunks]
+
 # Save to quadrant
 collection_name = "chatuas_qdrant_store"
 
 vector_store = QdrantVectorStore.from_documents(
     documents=chunks,
     embedding=embeddings,
+    ids=ids,
     url="http://localhost:6333",
     collection_name=collection_name,
 )
