@@ -67,9 +67,14 @@ def chat_stream(q: Question):
             tokens, sources = rag(q.question, stream=True)
             for token in tokens:
                 yield token
-            yield "\n\nQuellen:\n" + "\n".join(s["Url"] for s in sources)
+
+            yield "\n\nQuellen:\n"
+            
+            for s in sources:
+                yield f"\n [{s["Index"]}] {s["Url"]} {s["Datum"]} \n {s["Ausschnitt"]}"
         finally:
             slots.release()
+
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
