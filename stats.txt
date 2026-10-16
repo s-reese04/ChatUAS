@@ -7,3 +7,5 @@ Retrieve Time: 0.07 seconds
 Model time: 5.37 seconds
 Retrieve Time: 0.03 seconds
 Model time: 7.30 seconds
+Retrieve Time: 0.02 seconds
+Model time: 7.36 seconds

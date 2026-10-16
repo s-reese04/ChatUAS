@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
@@ -39,14 +38,8 @@ prompt = ChatPromptTemplate.from_messages([
 chain = prompt | llm | StrOutputParser()
 
 
-def rag(question: str) -> dict:
-    beforeRetrieve = time.time()
+def rag(question: str, stream: bool = False) -> dict:
     chunks = retriever.invoke(question)
-    afterRetrieve = time.time()
-
-    with open("stats.txt", "a") as s:
-        s.write(f"Retrieve Time: {afterRetrieve - beforeRetrieve:.2f} seconds\n")
-
     context_parts = []
     sources = []
 
@@ -63,18 +56,15 @@ def rag(question: str) -> dict:
         })
 
     context_text = "\n\n".join(context_parts)
-
-    beforeModel = time.time()
-    answer = chain.invoke({"context": context_text, "question": question})
-    afterModel = time.time()
-
-    with open("stats.txt", "a") as s:
-        s.write(f"Model time: {afterModel - beforeModel:.2f} seconds\n")
-
-    return {
-        "answer": answer,
-        "sources": sources
-    }
+    
+    # stream variante
+    if stream:
+        return chain.stream({"context": context_text, "question": question}), sources
+        
+    # nicht stream variante
+    else:
+        answer = chain.invoke({"context": context_text, "question": question})
+        return {"answer": answer, "sources": sources}
 
 
 def print_result(result: dict) -> None:
