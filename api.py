@@ -2,7 +2,6 @@ import logging
 import os
 import threading
 
-from collections.abc import Iterable
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +16,7 @@ app = FastAPI(title="ChatUAS")
 origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8001", "http://127.0.0.1:8001"], 
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type"],
 )
@@ -71,7 +70,10 @@ def chat_stream(q: Question):
             yield "\n\nQuellen:\n"
             
             for s in sources:
-                yield f"\n [{s["Index"]}] {s["Url"]} {s["Datum"]} \n {s["Ausschnitt"]}"
+                yield f"\n [{s["Index"]}]"
+                yield f"{s["Url"]}"
+                yield f"{s["Datum"]}"
+                yield f"\n {s["Ausschnitt"]}"
         finally:
             slots.release()
 
