@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatUAS: Testseite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 4rem auto; padding: 0 1rem; color: #1c2430; line-height: 1.6; }
+    code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Testseite für das ChatUAS-Widget</h1>
+  <p>Der Chat öffnet sich über die Schaltfläche unten rechts. Die Adresse der API stellt man in <code>window.CHATUAS_CONFIG</code> ein.</p>
+
+  <script>
+    window.CHATUAS_CONFIG = { apiUrl: "http://127.0.0.1:8001/chat/stream" };
+  </script>
+  <script src="chatuas-widget.js" defer></script>
+</body>
+</html>
