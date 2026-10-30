@@ -7,9 +7,10 @@ from urllib.parse import (
 import json
 from datetime import date
 import time
+from collections import Counter
 
 
-URL = "https://www.frankfurt-university.de/"
+URL = "https://asta-fra-uas.de/"
 
 CONTENT_SELECTORS = [
     ".frame-type-text",
@@ -19,6 +20,39 @@ CONTENT_SELECTORS = [
     ".frame-type-list article",
 ]
 
+HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+BLOCK_TAGS = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "ul", "ol", "table"]
+
+SKIP_EXACT = ("/datenschutz", "/impressum")
+
+NOISE_TEXTS = {
+    "Weitere Öffnungszeiten", "Further opening times", "News",
+    "Mehr Information…", "More Information…", "More Information",
+    "Your Content Goes Here",
+}
+
+NOISE_SELECTORS = [
+    ".hidden-lg",
+    ".sr-only",
+    ".my_calendar_mini_widget",
+    ".mc-main",
+    ".fusion-mobile-tab-nav",
+    ".custom-startseite",
+]
+
+PROMOTE_SELECTORS = [".currency"]
+
+SKIP_PATTERNS = ("/author/", "/page/", "/feed/", "/tag/", "/category/", "/wp-json/", "/wp-admin/")
+SKIP_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".zip", ".docx", ".xlsx", ".mp4")
+
+
+def is_crawlable(url):
+    path = urlparse(url).path.lower()
+    if path.endswith(SKIP_EXTENSIONS) or path in SKIP_EXACT:
+        return False
+    if path.startswith("/download/"):
+        return False
+    return not any(pattern in path + "/" for pattern in SKIP_PATTERNS)
 
 def normalize_url(url):
     # Remove the fragment, e.g. #section
@@ -39,7 +73,7 @@ def normalize_url(url):
 
     # Rebuild the URL without its fragment
     return urlunparse((
-        parts.scheme.lower(),
+        "https",
         parts.netloc.lower(),
         path,
         parts.params,
@@ -48,12 +82,29 @@ def normalize_url(url):
     ))
 
 
-
-
 def clean_text(el):
     text = el.get_text(" ", strip=True)
     text = text.replace("&shy;", "").replace("\u00ad", "")
     return " ".join(text.split())
+
+def table_to_text(table):
+    lines = []
+    for row in table.find_all("tr"):
+        cells = [cell_text(c) for c in row.find_all(["th", "td"])]
+        cells = [c for c in cells if c]
+        if len(cells) >= 2:
+            lines.append(f"{cells[0]}: {' '.join(cells[1:])}")
+        elif cells:
+            lines.append(cells[0])
+    return "\n".join(lines)
+
+#fix for span blocks inside tables, so that hours remain attached to a day
+def cell_text(cell):
+    spans = cell.find_all("span", recursive=False)
+    if len(spans) > 1:
+        parts = [clean_text(s) for s in spans]
+        return ", ".join(p for p in parts if p)
+    return clean_text(cell)
 
 def make_unit(el, base_url):
     link = el.select_one("a.img-text-link__link")
@@ -75,53 +126,40 @@ def make_unit(el, base_url):
     return {"kind": "text", "text": text}
 
 
-def extract_units(soup, base_url):
-    units = []
-    for area in soup.select("div.top-content, div#main-content"):
-        for el in area.select(", ".join(CONTENT_SELECTORS)):
-            unit = make_unit(el, base_url)
-            if unit:
-                unit["frames"] = [p.get("id", "?") for p in el.find_parents("div", class_="frame")]
-                units.append(unit)
-    return units
-
-def group_links(units):
-    grouped = []
-    for unit in units:
-        if unit["kind"] == "link" and grouped and grouped[-1]["kind"] == "linklist":
-            grouped[-1]["items"].append(unit)
-        elif unit["kind"] == "link":
-            grouped.append({"kind": "linklist", "items": [unit]})
-        else:
-            grouped.append(unit)
-    return grouped
 
 
-def attach_headings(units, default_section=""):
+
+def extract_chunks(area, default_section):
     chunks = []
-    heading = None
-    for unit in units:
-        if unit["kind"] == "heading":
-            heading = unit
+    headings = []
+    section = default_section
+    parts = []
+
+    for el in area.find_all(BLOCK_TAGS):
+        if el.find_parent(BLOCK_TAGS):
+            continue
+        text = table_to_text(el) if el.name == "table" else clean_text(el)
+        if not text or text in NOISE_TEXTS:
             continue
 
-        if unit["kind"] == "linklist":
-            frames = unit["items"][0]["frames"]
-            text = "\n".join(f"{i['text']}: {i['url']}" for i in unit["items"])
+        if el.name in HEADING_TAGS:
+            if parts:
+                chunks.append({"section": section, "text": section + "\n" + "\n".join(parts)})
+                parts = []
+                headings = []
+            headings.append(text)
+            section = " – ".join(headings[-2:])
         else:
-            frames = unit["frames"]
-            text = unit["text"]
+            parts.append(text)
 
-        if heading and set(heading["frames"]) & set(frames):
-            section = heading["text"]
-        else:
-            section = default_section
-
-        chunks.append({"section": section, "text": text})
+    if parts:
+        chunks.append({"section": section, "text": section + "\n" + "\n".join(parts)})
     return chunks
 
 def save_jsonl(chunks, page_url, page_title, filename):
     with open(filename, "a", encoding="utf-8") as f:
+        path = urlparse(page_url).path
+        lang = "en" if path == "/en" or path.startswith("/en/") else "de"
         for chunk in chunks:
             record = {
                 "text": chunk["text"],
@@ -129,6 +167,7 @@ def save_jsonl(chunks, page_url, page_title, filename):
                 "page_title": page_title,
                 "url": page_url,
                 "scraped_at": date.today().isoformat(),
+                "lang": lang
             }
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -157,6 +196,7 @@ def find_links(soup, page_url, domain):
         if (
             parts.scheme in ("http", "https")
             and parts.netloc == domain
+            and is_crawlable(link)
         ):
             links.add(link)
 
@@ -169,11 +209,14 @@ def process_page(url, domain):
         return set()
     soup = BeautifulSoup(response.content, "html.parser")
     links = find_links(soup, url, domain)          # before removing anything
-    for el in soup.select(".hidden-lg, .sr-only"):
+    for el in soup.select(", ".join(NOISE_SELECTORS)):
         el.decompose()
+    for el in soup.select(", ".join(PROMOTE_SELECTORS)):
+        el.parent.name = "p"
     page_title = clean_text(soup.title) if soup.title else url
-    units = extract_units(soup, url)
-    chunks = attach_headings(group_links(units), default_section=page_title)
+    area = soup.select_one(".post-content")
+    chunks = extract_chunks(area, default_section=page_title) if area else []
+    print(f"   {len(chunks)} chunks")
     save_jsonl(chunks, url, page_title, "chunks.jsonl")
     return links
 
@@ -222,9 +265,8 @@ def crawl(start_url, max_pages=200):
 
 
 # main stuff
-
 if __name__ == "__main__":
-    crawl(URL, max_pages=5)
+    crawl(URL, max_pages=200)
 
 with open("chunks.jsonl", encoding="utf-8") as f:
     records = [json.loads(line) for line in f]

@@ -3,4 +3,5 @@ ChatUASEnv/*
 __pycache__/
 units.txt
 chunks.jsonl
+chunks_clean.jsonl
 stats.txt
