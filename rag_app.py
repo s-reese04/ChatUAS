@@ -28,6 +28,7 @@ system_prompt = (
     "auf Basis des folgenden Kontexts: \n\n{context}"
     "Lässt sich die Frage nicht mit den Kontext beantworten, dann sag:"
     "Ich kann dies leider nicht beantworten, bitte melden Sie sich an die Studienberatung"
+    "Sollte deine Antwort zu lange werden, dann breche deine Antwort ab"
 )
 
 prompt = ChatPromptTemplate.from_messages([
