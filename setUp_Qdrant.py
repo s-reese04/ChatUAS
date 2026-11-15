@@ -10,8 +10,8 @@ embeddings = OllamaEmbeddings(model="bge-m3")  # Oder nomic-embed-text
 
 chunks = []
 
-# Read from chunks.jsonl
-with open("chunks.jsonl", "r", encoding="utf-8") as f:
+# Read from chunks_clean.jsonl
+with open("chunks_clean.jsonl", "r", encoding="utf-8") as f:
     for line in f:
         if not line.strip():
             continue

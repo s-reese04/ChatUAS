@@ -71,8 +71,8 @@ def chat_stream(q: Question):
             
             for s in sources:
                 yield f"\n [{s["Index"]}]"
-                yield f"{s["Url"]}"
-                yield f"{s["Datum"]}"
+                yield f"{s["Url"]} "
+                yield f"{s["Datum"]} "
                 yield f"\n {s["Ausschnitt"]}"
         finally:
             slots.release()

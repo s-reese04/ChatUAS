@@ -1,24 +1,23 @@
-/*
- * ChatUAS Widget
+ /*
+ * ChatUAS Widget (AStA-Design)
  * Einbinden:  <script src="chatuas-widget.js" defer></script>
  * Optional davor konfigurieren:
  *   <script>window.CHATUAS_CONFIG = { apiUrl: "https://bot.example.de/chat/stream" };</script>
  */
 (() => {
     "use strict";
-
+    
     const CONFIG = Object.assign(
         {
             apiUrl: "http://127.0.0.1:8001/chat/stream",
             title: "Fragen zur Hochschule",
             subtitle: "Antworten aus den Webseiten der Frankfurt UAS",
             welcome:
-            "Hallo! Stell mir eine Frage zu Studium, Bewerbung oder Organisation. Ich suche die Antwort auf den Webseiten der Hochschule.",
-            accent: "#0d5c75",
+                "Hallo! Stell mir eine Frage zu Studium, Bewerbung oder Organisation. Ich suche die Antwort auf den Webseiten der Hochschule.",
+            accent: "#dd0b30", // AStA-Rot
+            logo: "./AStALogo.png", // Relativer Pfad zum Logo im selben Verzeichnis
             maxLength: 500,
             timeoutMs: 180000,
-            // true: sendet zusätzlich "history" (letzte Nachrichten) mit. Das Backend ignoriert das Feld,
-            // bis rag() es auswertet.
             sendHistory: false,
         },
         window.CHATUAS_CONFIG || {}
@@ -29,8 +28,9 @@
     const CSS = `
     :host { all: initial; }
     *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     .wrap {
-        --ink: #1c2430; --muted: #5a6676; --paper: #ffffff; --mist: #eef1f5; --line: #d9dee6;
+        --ink: #1d1d1d; --muted: #5b5b5b; --paper: #ffffff; --mist: #f3f3f3; --line: #dcdcdc;
         --accent: ${CONFIG.accent};
         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
         color: var(--ink);
@@ -40,21 +40,23 @@
 
     .launcher {
         position: fixed; right: 20px; bottom: max(20px, env(safe-area-inset-bottom));
-        width: 56px; height: 56px; border: 0; border-radius: 50%;
+        width: 60px; height: 60px; padding: 0; border: 0; border-radius: 50%;
         background: var(--accent); color: #fff; cursor: pointer;
         display: grid; place-items: center;
-        box-shadow: 0 4px 16px rgba(20, 30, 45, .28);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
         z-index: 2147483000;
+        transition: transform .12s, background-color .12s;
     }
-    .launcher svg { width: 26px; height: 26px; }
+    .launcher:hover { transform: scale(1.05); filter: brightness(.9); }
+    .launcher svg { width: 26px; height: 26px; fill: currentColor; }
 
     .panel {
-        position: fixed; right: 20px; bottom: calc(max(20px, env(safe-area-inset-bottom)) + 68px);
+        position: fixed; right: 20px; bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px);
         width: min(400px, calc(100vw - 24px));
-        height: min(600px, calc(100dvh - 110px));
+        height: min(600px, calc(100dvh - 120px));
         display: flex; flex-direction: column;
         background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
-        box-shadow: 0 12px 40px rgba(20, 30, 45, .22);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
         overflow: hidden; z-index: 2147483000;
         opacity: 0; transform: translateY(8px); visibility: hidden;
         transition: opacity .16s, transform .16s, visibility 0s .16s;
@@ -62,17 +64,19 @@
     .panel.open { opacity: 1; transform: none; visibility: visible; transition-delay: 0s; }
 
     header {
-        display: flex; align-items: center; justify-content: space-between; gap: 12px;
-        padding: 12px 14px; background: var(--accent); color: #fff;
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 10px 10px 14px; background: var(--paper);
+        border-bottom: 3px solid var(--accent);
     }
-    .title { font-weight: 600; }
-    .subtitle { font-size: 13px; opacity: .85; }
+    .logo { flex: none; height: 30px; width: auto; display: block; }
+    .heading { flex: 1; min-width: 0; padding-left: 12px; border-left: 1px solid var(--line); }
+    .title { font-weight: 600; font-size: 14px; line-height: 1.3; }
+    .subtitle { font-size: 12px; line-height: 1.3; color: var(--muted); }
     .close {
         flex: none; width: 32px; height: 32px; border: 0; border-radius: 8px;
-        background: transparent; color: #fff; cursor: pointer; display: grid; place-items: center;
+        background: transparent; color: var(--ink); cursor: pointer; display: grid; place-items: center;
     }
-    .close:hover { background: rgba(255, 255, 255, .16); }
-    .close:focus-visible { outline-color: #fff; }
+    .close:hover { background: var(--mist); }
     .close svg { width: 18px; height: 18px; }
 
     .messages {
@@ -92,7 +96,8 @@
         align-self: flex-start; background: var(--paper); border: 1px solid var(--line);
         border-bottom-left-radius: 3px;
     }
-    .msg.error { background: #fdf3f2; border-color: #d9847a; color: #8f1f14; }
+    .msg.error { background: var(--paper); border: 2px solid var(--accent); }
+    .stopped { margin-top: 6px; font-size: 13px; font-style: italic; color: var(--muted); }
 
     .sources { margin-top: 8px; font-size: 13px; }
     .sources-toggle {
@@ -101,7 +106,6 @@
     }
     .sources-toggle:hover { text-decoration: underline; }
     .sources-list { list-style: none; margin: 6px 0 0; padding: 6px 0 0; border-top: 1px solid var(--line); }
-    .sources-list[hidden] { display: none; }
     .sources-list a {
         display: block; padding: 2px 0; color: var(--accent);
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -110,7 +114,7 @@
 
     .dots { display: inline-flex; gap: 4px; padding: 5px 0; }
     .dots i {
-        width: 6px; height: 6px; border-radius: 50%; background: #8893a3;
+        width: 6px; height: 6px; border-radius: 50%; background: #8a8a8a;
         animation: pulse 1s infinite ease-in-out;
     }
     .dots i:nth-child(2) { animation-delay: .15s; }
@@ -122,41 +126,53 @@
         flex: 1; min-width: 0; padding: 9px 12px;
         border: 1px solid var(--line); border-radius: 8px; background: var(--paper);
     }
+    .composer input:focus { border-color: var(--ink); }
     .composer button {
         flex: none; padding: 9px 14px; border: 0; border-radius: 8px;
         background: var(--accent); color: #fff; font-weight: 600; cursor: pointer;
     }
-    .composer button:disabled, .composer input:disabled { opacity: .55; cursor: not-allowed; }
+    .composer button:hover { filter: brightness(.9); }
+    .composer .stop {
+        display: inline-flex; align-items: center; gap: 7px;
+        background: var(--ink);
+    }
+    .composer .stop svg { width: 11px; height: 11px; }
+    .composer input:disabled { opacity: .55; cursor: not-allowed; }
     .note { margin: 0; padding: 0 12px 10px; font-size: 12px; color: var(--muted); background: var(--paper); }
 
     @media (max-width: 480px) {
-        .panel { left: 8px; right: 8px; width: auto; height: calc(100dvh - 100px); }
+        .panel { left: 8px; right: 8px; width: auto; height: calc(100dvh - 110px); }
     }
     @media (prefers-reduced-motion: reduce) {
-        .panel { transition: none; }
+        .panel, .launcher { transition: none; }
         .dots i { animation: none; opacity: .6; }
     }
     `;
 
     const HTML = `
     <div class="wrap">
-    <section class="panel" id="panel" role="dialog" aria-label="Chat mit dem Hochschul-Assistenten">
-    <header>
-    <div><div class="title"></div><div class="subtitle"></div></div>
-    <button class="close" type="button" aria-label="Chat schließen">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-    </header>
-    <div class="messages" role="log" aria-live="polite"></div>
-    <form class="composer" autocomplete="off">
-    <input type="text" name="q" aria-label="Deine Frage" placeholder="Frage eingeben" />
-    <button type="submit">Senden</button>
-    </form>
-    <p class="note">KI-Assistent. Antworten ohne Gewähr, bitte Quellen prüfen.</p>
-    </section>
-    <button class="launcher" type="button" aria-label="Chat öffnen" aria-expanded="false" aria-controls="panel">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>
-    </button>
+        <section class="panel" id="panel" role="dialog" aria-label="Chat mit dem Hochschul-Assistenten">
+            <header>
+                <img class="logo" alt="AStA Logo" />
+                <div class="heading"><div class="title"></div><div class="subtitle"></div></div>
+                <button class="close" type="button" aria-label="Chat schließen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </header>
+            <div class="messages" role="log" aria-live="polite"></div>
+            <form class="composer" autocomplete="off">
+                <input type="text" name="q" aria-label="Deine Frage" placeholder="Frage eingeben" />
+                <button type="submit" class="send">Senden</button>
+                <button type="button" class="stop" aria-label="Antwort abbrechen" hidden>
+                    <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect width="12" height="12" rx="2"/></svg>
+                    Stopp
+                </button>
+            </form>
+            <p class="note">KI-Assistent. Antworten ohne Gewähr, bitte Quellen prüfen.</p>
+        </section>
+        <button class="launcher" type="button" aria-label="Chat öffnen" aria-expanded="false" aria-controls="panel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.48 3 2 6.58 2 11c0 2.15 1.05 4.14 2.85 5.61L4 20l3.81-1.14C9.07 19.26 10.5 19.5 12 19.5c5.52 0 10-3.58 10-8s-4.48-8-10-8zm0 14c-1.31 0-2.58-.27-3.72-.75l-.27-.12-2.12.64.65-2.07-.15-.26C5.55 13.56 5 12.33 5 11c0-3.86 3.59-7 8-7s8 3.14 8 7-3.59 7-8 7z"/></svg>
+        </button>
     </div>
     `;
 
@@ -172,16 +188,18 @@
     const list = $(".messages");
     const form = $(".composer");
     const input = form.querySelector("input");
-    const sendBtn = form.querySelector("button");
+    const sendBtn = form.querySelector(".send");
+    const stopBtn = form.querySelector(".stop");
 
+    $(".logo").src = CONFIG.logo;
     $(".title").textContent = CONFIG.title;
     $(".subtitle").textContent = CONFIG.subtitle;
     input.maxLength = CONFIG.maxLength;
 
-    const history = []; // { role: "user" | "assistant", content }
+    const history = [];
     let busy = false;
-
-    // ---------- Hilfsfunktionen ----------
+    let ctrl = null;
+    let userAborted = false;
 
     function setOpen(open, moveFocus) {
         panel.classList.toggle("open", open);
@@ -205,9 +223,6 @@
         if (stick) list.scrollTop = list.scrollHeight;
     }
 
-    // Das Backend hängt die Quellen als Text an: "<Antwort>\n\nQuellen:\n<url>\n<url>".
-    // Erkannt wird die letzte Zeile "Quellen:". Alle URLs dahinter werden eingesammelt,
-    // egal in welchem Zeilenformat und ob mit \n oder \r\n.
     const SOURCES_RE = /\n[ \t]*Quellen:[ \t]*\r?\n/g;
     const PARTIAL_RE = /\n[ \t]*Q(?:u(?:e(?:l(?:l(?:e(?:n(?::[ \t]*)?)?)?)?)?)?)?\r?$/;
     const URL_RE = /https?:\/\/[^\s<>"')\]]+/g;
@@ -217,7 +232,6 @@
         let last = null;
         SOURCES_RE.lastIndex = 0;
         while ((m = SOURCES_RE.exec(full))) last = m;
-        // Noch kein vollständiger Marker: angefangenes "Quellen:" am Ende nicht anzeigen
         if (!last) return { text: full.replace(PARTIAL_RE, "").trim(), urls: [] };
         const found = full.slice(last.index + last[0].length).match(URL_RE) || [];
         const urls = [...new Set(found.map((u) => u.replace(/[.,;:!?]+$/, "")))];
@@ -268,7 +282,7 @@
             }
 
             toggle.addEventListener("click", () => {
-                const open = ul.hidden; // war zu, wird jetzt geöffnet
+                const open = ul.hidden;
                 ul.hidden = !open;
                 toggle.setAttribute("aria-expanded", String(open));
                 toggle.textContent = open ? "Quellen ausblenden" : `Quellen anzeigen (${urls.length})`;
@@ -282,6 +296,21 @@
         return text;
     }
 
+    function renderStopped(el, full) {
+        const { text } = splitAnswer(full);
+        el.className = "msg bot";
+        el.textContent = "";
+        const body = document.createElement("div");
+        body.className = "text";
+        body.textContent = text;
+        const note = document.createElement("div");
+        note.className = "stopped";
+        note.textContent = "Antwort abgebrochen";
+        el.append(body, note);
+        list.scrollTop = list.scrollHeight;
+        return text;
+    }
+
     function errorText(err) {
         if (err.name === "AbortError") return "Die Anfrage hat zu lange gedauert. Bitte stelle die Frage noch einmal.";
         if (err instanceof TypeError) return "Der Assistent ist nicht erreichbar. Bitte versuche es später erneut.";
@@ -291,14 +320,20 @@
     function setBusy(value) {
         busy = value;
         input.disabled = value;
-        sendBtn.disabled = value;
+        sendBtn.hidden = value;
+        stopBtn.hidden = !value;
         list.setAttribute("aria-busy", String(value));
     }
 
-    // ---------- Senden und Streamen ----------
+    function stop() {
+        if (!busy || !ctrl) return;
+        userAborted = true;
+        ctrl.abort();
+    }
 
     async function send(question) {
         setBusy(true);
+        stopBtn.focus();
         addMessage("user", question);
         history.push({ role: "user", content: question });
 
@@ -308,15 +343,17 @@
         const payload = { question };
         if (CONFIG.sendHistory) payload.history = history.slice(-7, -1);
 
-        const ctrl = new AbortController();
+        userAborted = false;
+        ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), CONFIG.timeoutMs);
+        let answer = "";
 
         try {
             const res = await fetch(CONFIG.apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
-                                    signal: ctrl.signal,
+                signal: ctrl.signal,
             });
 
             if (!res.ok) {
@@ -328,13 +365,12 @@
 
             const reader = res.body.getReader();
             const decoder = new TextDecoder("utf-8");
-            let answer = "";
 
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
                 answer += decoder.decode(value, { stream: true });
-                showText(botEl, splitAnswer(answer).text); // Quellen erst am Ende anzeigen
+                showText(botEl, splitAnswer(answer).text);
             }
             answer += decoder.decode();
 
@@ -343,33 +379,41 @@
             const text = renderAnswer(botEl, answer);
             history.push({ role: "assistant", content: text });
         } catch (err) {
-            botEl.className = "msg bot error";
-            botEl.textContent = errorText(err);
+            if (userAborted) {
+                const text = renderStopped(botEl, answer);
+                if (text) history.push({ role: "assistant", content: text });
+                else history.pop();
+            } else {
+                botEl.className = "msg bot error";
+                botEl.textContent = errorText(err);
+            }
         } finally {
             clearTimeout(timer);
+            ctrl = null;
             setBusy(false);
             input.focus();
         }
     }
 
-    // ---------- Events ----------
-
     launcher.addEventListener("click", () => setOpen(!panel.classList.contains("open"), true));
     closeBtn.addEventListener("click", () => setOpen(false, true));
+    stopBtn.addEventListener("click5" in window ? "click" : "click", stop); // fix syntax helper
+    // Standard-Eventlistener für den Stopp-Button:
+    stopBtn.addEventListener("click", stop);
     root.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && panel.classList.contains("open")) setOpen(false, true);
     });
-        form.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const question = input.value.trim();
-            if (!question || busy) return;
-                              input.value = "";
-            send(question);
-        });
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const question = input.value.trim();
+        if (!question || busy) return;
+        input.value = "";
+        send(question);
+    });
 
-        addMessage("bot", CONFIG.welcome);
+    addMessage("bot", CONFIG.welcome);
 
-        const mount = () => document.body.appendChild(host);
-        if (document.body) mount();
-        else document.addEventListener("DOMContentLoaded", mount);
+    const mount = () => document.body.appendChild(host);
+    if (document.body) mount();
+    else document.addEventListener("DOMContentLoaded", mount);
 })();
