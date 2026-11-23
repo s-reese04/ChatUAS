@@ -9,8 +9,19 @@ from datetime import date
 import time
 from collections import Counter
 
-
+# VERSION = 2.0
 URL = "https://asta-fra-uas.de/"
+
+# --- Einstellungen ---
+CRAWL_ENGLISH = False   # ignoriert englische Seiten, wenn false
+DELAY = 0.3             # 0.3s Pause zwischen den Anfragen, statt 1 Sekunde
+# Manuell geschriebener hint vor jedem Chunk. Key = URL path.
+PAGE_HINTS = {
+    "/": "Startseite des AStA mit aktuellen News und Neuigkeiten",
+}
+
+# Eine Session für alle Requests, um Cookies zu teilen und Verbindungen wiederzuverwenden
+SESSION = requests.Session()
 
 CONTENT_SELECTORS = [
     ".frame-type-text",
@@ -48,6 +59,8 @@ SKIP_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".zip", ".docx", ".x
 
 def is_crawlable(url):
     path = urlparse(url).path.lower()
+    if not CRAWL_ENGLISH and (path == "/en" or path.startswith("/en/")):
+        return False
     if path.endswith(SKIP_EXTENSIONS) or path in SKIP_EXACT:
         return False
     if path.startswith("/download/"):
@@ -160,9 +173,17 @@ def save_jsonl(chunks, page_url, page_title, filename):
     with open(filename, "a", encoding="utf-8") as f:
         path = urlparse(page_url).path
         lang = "en" if path == "/en" or path.startswith("/en/") else "de"
+        label = page_title
+        if path in PAGE_HINTS:
+            label = f"{page_title} – {PAGE_HINTS[path]}"
         for chunk in chunks:
+            body = chunk["text"]
+            # the first chunk of a page often starts with the page title already
+            if body.startswith(page_title + "\n"):
+                body = body[len(page_title) + 1:]
             record = {
-                "text": chunk["text"],
+                # every chunk now says which page it comes from
+                "text": label + "\n" + body,
                 "section": chunk["section"],
                 "page_title": page_title,
                 "url": page_url,
@@ -174,7 +195,7 @@ def save_jsonl(chunks, page_url, page_title, filename):
 
 def fetch(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = SESSION.get(url, timeout=10)
     except requests.RequestException:
         return None
     if response.status_code != 200:
@@ -257,7 +278,7 @@ def crawl(start_url, max_pages=200):
 
         # Wait between requests
         if queue and len(visited) < max_pages:
-            time.sleep(1)
+            time.sleep(DELAY)
 
     print(f"\nFinished. Pages attempted: {len(visited)}")
     print(f"Pages remaining in queue: {len(queue)}")
